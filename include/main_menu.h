@@ -1,7 +1,7 @@
 #ifndef MENU_H
 #define MENU_H
 
-#define WIDTH 45
+#define SCREEN_WIDTH 50
 
 void print_centered(const char*);
 void display_main_menu();

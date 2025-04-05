@@ -4,10 +4,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <ncurses.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <ncurses.h>
+#include <unistd.h>
+
+#elif defined(_WIN32)
+#include<windows.h>
+#include <conio.h>
+
+#endif
 
 #define WIDTH  45
 #define HEIGHT 25
@@ -20,12 +28,14 @@ bool running;
 bool paused;
 
 void initGame(){
-    // ncurses FUNCTIONS
+    #if defined(__linux__) || defined(__APPLE__)
+    // ncurses FUNCTIONS (for Linux or macOS)
     initscr();
     noecho();
     curs_set(0);
     keypad(stdscr, TRUE);
     timeout(100);
+    #endif
 
     /////////////////////////////////////////////////////////////////
     //                      GAME SETTINGS
@@ -49,8 +59,10 @@ void initGame(){
 }
 
 void printGame(){
+    #if defined(__linux__) || defined(__APPLE__)
+   
     clear();
-
+    
     // DISPLAY THE SCORE
     mvprintw(0,(WIDTH/2),"Score: %d",score);
 
@@ -58,15 +70,9 @@ void printGame(){
     for(int y = 0; y <= HEIGHT+2; y++){
         for(int x = 0; x < WIDTH; x++){
             if(y == 1)  mvprintw(y, x, "_");
-            if(x == 0 && y >= 2 && y < HEIGHT)  mvprintw(y, x, "|");
-            if(x == WIDTH-1 && y >= 2 && y < HEIGHT)    mvprintw(y, x, "|");
+            if(x == 0 && y >= 2 && y < HEIGHT+2)  mvprintw(y, x, "|");
+            if(x == WIDTH-1 && y >= 2 && y < HEIGHT+2)    mvprintw(y, x, "|");
             if(y == HEIGHT+2)   mvprintw(y, x, "-");
-            
-            // Fixed coordinates
-            if(x == 0 && y == HEIGHT)   mvprintw(y, x, "|");
-            if(x == 0 && y == HEIGHT+1) mvprintw(y, x, "|");
-            if(x == WIDTH-1 && y == HEIGHT) mvprintw(y, x, "|");
-            if(x == WIDTH-1 && y == HEIGHT+1)   mvprintw(y, x, "|");
         }
     }
 
@@ -80,6 +86,38 @@ void printGame(){
     mvprintw(fruit.y+2,fruit.x,"+");
 
     refresh();
+
+    #elif defined(_WIN32)
+    // Alternative for Windows
+    system("cls");
+    
+    // PRINTING THE BOARD
+    for(int i = 0; i <= HEIGHT+2; i++){
+        for(int j = 0; j < WIDTH; j++){
+            bool printed = false;
+            if(i == 0 && j == (WIDTH/2) - 4) { printf("Score: %d",score); printed = true; }    // DISPLAY THE SCORE
+            if(i == 1) { printf("_"); printed = true; } 
+            if(j == 0 && i >= 2 && i < HEIGHT+2) { printf("|"); printed = true; }
+            if(j == WIDTH-1 && i >= 2 && i < HEIGHT+2) { printf("|"); printed = true; }
+            if(i == HEIGHT+2) { printf("-"); printed = true; }
+            
+            // PRINTING THE SNAKE
+            for (int k=0;k<snake.length;k++){
+                if(i == snake.body[k].y+2 && j == snake.body[k].x){
+                    (k==0) ?  printf("@") : printf("o") ;
+                    printed = true;
+                }
+            }
+            // PRINTING THE FRUIT
+            if(i == fruit.y+2 && j == fruit.x) {
+                printf("+");
+                printed = true;
+            }
+            if(printed == false)  printf(" ");
+        }
+        printf("\n");
+    }    
+    #endif
 }
 
 void updateGame(){
@@ -129,7 +167,24 @@ void updateGame(){
 }
 
 void keyboardInput(){
-    char dir = getch();
+    char dir;
+
+    #if defined(__linux__) || defined(__APPLE__)
+    dir = getch();
+    
+    #elif defined(_WIN32)
+    int wait_time = 100; // 100 milliseconds
+
+    for(int i = 0; i < wait_time; i+=10){
+        if (_kbhit()) { // Check if a key is pressed
+            dir = _getch(); // Read the key
+            break;; // Exit after key press
+        }
+        Sleep(10); // Wait 10ms and then again checks if a key is pressed
+    }
+
+    #endif
+    
     switch(dir){
         case 'k': // up
             if (snake.direction != 'k' && snake.direction != 'j') snake.direction = 'k'; 
@@ -160,9 +215,15 @@ void run_game(const char* user){
             printGame(); // Prints Board, Snake and Fruit
             keyboardInput(); // Takes the user input
             updateGame();
-            usleep(100000);
+            #if defined(__linux__) || defined(__APPLE__)
+            usleep(100000);  //pause execution 100 millisecond  (ncurses function)
+            #elif defined(_WIN32)
+            Sleep(100);  //pause execution 100 millisecond (windows.h function)
+            #endif
         }
+        #if defined(__linux__) || defined(__APPLE__)
         endwin(); // to return to console (ncurses function)
+        #endif
 
         printf("\nGame Over! Your Score: %d\n", score);
         updatehighscore(user, score); // Also, print if new highscore

@@ -9,7 +9,7 @@
 
 void print_centered(const char *text){
     int len = strlen(text);
-    int spaces = (WIDTH - len) / 2;
+    int spaces = (SCREEN_WIDTH - len) / 2;
 
     for (int i = 0; i < spaces; i++) printf(" ");
     printf("%s\n", text);
@@ -133,7 +133,7 @@ const char* run_main_menu() {
                 for (int i = 0; i < count; i++) {
                     printf("%d. %s - %d\n", i + 1, players[i].name, players[i].score);
                 }
-                printf("Press <Enter> to go back to Main Menu...");
+                printf("\n\nPress <Enter> to go back to Main Menu...");
                 while (getchar() != '\n');
                 break;
             }
