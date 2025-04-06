@@ -1,14 +1,18 @@
 #include "../include/scores.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "../include/common.h"
 
-#define MAX_LINE_LENGTH 50 // no. of characters in each line
 #define MAX_USERS 100 // no. of lines
 
 void updatehighscore(const char *user, uint16_t curr_score) {
+
+    typedef struct{
+        char name[50];
+        uint16_t score;
+    } Player;
+
+    Player players[MAX_USERS];
+    int linecount = 0;
+    bool user_found = false;
 
     FILE *file = fopen("data/highscores.csv", "r");
     if(!file){  // Assuming first user registers their score
@@ -16,52 +20,36 @@ void updatehighscore(const char *user, uint16_t curr_score) {
         fopen("data/highscores.csv", "w+");
     }
 
-    char lines[MAX_USERS][MAX_LINE_LENGTH];
-    
-    uint16_t line_no = 0; 
-    bool user_found = false;
-
     ////////////////////////////////////////////////////////////////////////////
     //      CHECK IF USER HAS PRE-EXISTING HIGHSCORE IN highscore.csv
     ////////////////////////////////////////////////////////////////////////////
 
-    while(fgets(lines[line_no], MAX_LINE_LENGTH, file)){    // go through each user in highscore.csv
-        char tempuser[MAX_LINE_LENGTH];
-        uint16_t tempscore;
-        if(sscanf(lines[line_no], "%48[^,],%5hu", tempuser, &tempscore) != 2)
-            continue;
-
-        if(strcmp(tempuser, user) == 0){ // if current user found in highscores.csv (=> has a pre-existitng highscore)
-            user_found = true;
-            // new highscore created
-            if(curr_score > tempscore){
-                printf("You made a new high score: %d\n", curr_score);
-                snprintf(lines[line_no], 
-                        MAX_LINE_LENGTH, 
-                        "%s,%d\n", 
-                        user, 
-                        curr_score); // store highscore in lines array
-            }
-            else    // not a highscore
-                printf("Your high score is %s: %d\n", user, tempscore);
-        }
-
-        line_no++;
-        if(line_no >= MAX_USERS) break; 
+    // store each username in highscore.csv
+    while (fscanf(file, " %49[^,],%hu", players[linecount].name, &players[linecount].score) == 2 && linecount < MAX_USERS){
+        linecount++;
     }
     fclose(file);
-
+    
+    for (int i = 0; i < linecount; i++) {
+        if(strcmp(players[i].name, user) == 0){   // if current user found in highscores.csv (=> has a pre-existitng highscore)
+            user_found = true;
+            // new highscore created
+            if(curr_score > players[i].score){
+                printf("You made a new high score: %hu\n", curr_score);
+                players[i].score = curr_score;
+            }
+            else    // not a highscore
+                printf("Your high score is: %hu\n", players[i].score);
+        }
+    }   
 
     // if no highscore exists for the current user
     if(!user_found) {
-        printf("You made a new high score: %d\n", curr_score);
-        if(line_no < MAX_USERS){
-            snprintf(lines[line_no],
-                MAX_LINE_LENGTH, 
-                "%s,%d\n", 
-                user, 
-                curr_score); // store highscore in lines array
-            line_no++;
+        if(linecount < MAX_USERS){
+            strcpy(players[linecount].name, user);
+            players[linecount].score = curr_score;  // Adds current score as new high score
+            printf("You made a new high score: %hu\n", curr_score);
+            linecount++;
         } 
         else{
             printf("Error: High score list is full!\n");
@@ -71,30 +59,19 @@ void updatehighscore(const char *user, uint16_t curr_score) {
 
     ///////////////////////////////////////////////////////
     //      UPDATE THE highscore.csv file
-    ///////////////////////////////////////////////////////
-    FILE *tempFile = fopen("data/highscores_temp.csv", "w");
-    if(!tempFile){
-        perror("Error opening highscores_temp.csv");
-        return;
+   ///////////////////////////////////////////////////////
+
+   FILE *tempFile = fopen("data/highscores_temp.csv", "w");
+   if(!tempFile){
+      perror("Error opening highscores_temp.csv");
+      return;
     }
 
-    for(int i = 0; i < line_no; i++)
-        fputs(lines[i], tempFile);
+    for(int i = 0; i < linecount; i++){
+       fprintf(tempFile, "%s,%hu\n", players[i].name, players[i].score);
+    }   
     fclose(tempFile);
 
-    if(remove("data/highscores.csv") != 0){
-        perror("Error removing old high score file");
-        return;
-    }
-
-    if(rename("data/highscores_temp.csv", "data/highscores.csv") != 0){
-        perror("Error renaming temporary file");
-    }
-}
-
-/*
-NOTE:
-    tempscore is highscore of tempuser in highscore.csv
-    "%48[^,],%5hu": read name upto 48 characters not including ','
-                    read highscore upto 5 characters long (as max value of highscore supported is 10000)
-*/
+    remove("data/highscores.csv");
+    rename("data/highscores_temp.csv", "data/highscores.csv");
+} 

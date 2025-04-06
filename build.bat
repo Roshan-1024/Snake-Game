@@ -1,6 +1,11 @@
 @echo off
+setlocal enabledelayedexpansion
+
+:: Compiler and flags
 set CC=gcc
 set CFLAGS=-Iinclude -Wall -Wextra -Werror
+
+:: Directories
 set SRC_DIR=src
 set OBJ_DIR=obj
 set BIN_DIR=bin
@@ -12,7 +17,6 @@ if not exist %BIN_DIR% mkdir %BIN_DIR%
 
 :: Compile source files
 for %%f in (%SRC_DIR%\*.c) do (
-    set filename=%%~nf
     %CC% %CFLAGS% -c %%f -o %OBJ_DIR%\%%~nf.o
 )
 
